@@ -54,7 +54,7 @@ func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
 	jsonData, _ := json.MarshalIndent(a, "", "\t")
 
 	// todo: move to environment variable
-	url := "http://authentication-service/authenticate"
+	url := "http://authenticate-service/authenticate"
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 
 	if err != nil {
