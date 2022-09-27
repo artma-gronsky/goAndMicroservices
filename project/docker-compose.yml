@@ -56,4 +56,15 @@ services:
     volumes:
       - ./db-data/mongo/:/data/db
 
+  logger-service:
+    depends_on: [mongo]
+    build:
+      context: ./../logger-service
+      dockerfile: ./../logger-service/logger-service.dockerfile
+    restart: always
+    ports:
+      - "8082:80"
+    deploy:
+      mode: replicated
+      replicas: 1
 

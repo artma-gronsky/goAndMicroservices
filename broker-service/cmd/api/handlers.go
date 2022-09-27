@@ -4,17 +4,24 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/go-http-utils/headers"
 	"net/http"
 )
 
 type RequestPayload struct {
 	Action string      `json:"action"`
 	Auth   AuthPayload `json:"auth,omitempty"`
+	Log    LogPayload  `json:"log,omitempty"`
 }
 
 type AuthPayload struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type LogPayload struct {
+	Name string `json:"name"`
+	Data string `json:"data"`
 }
 
 func (app *Config) Broker(w http.ResponseWriter, r *http.Request) {
@@ -42,6 +49,10 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 			app.authenticate(w, requestPayload.Auth)
 			return
 		}
+	case "log":
+		{
+			app.log(w, requestPayload.Log)
+		}
 	default:
 		{
 			app.errorJSON(w, errors.New("unsupported action was provided"), http.StatusBadRequest)
@@ -49,7 +60,59 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+func (app *Config) log(w http.ResponseWriter, a LogPayload) {
+	jsonDataBytes, err := json.MarshalIndent(a, "", "\t")
 
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	// todo: move to environment variable
+	url := "http://logger-service/log"
+
+	request, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonDataBytes))
+	request.Header.Set(headers.ContentType, "application/json")
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	client := &http.Client{}
+	response, err := client.Do(request)
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted {
+		app.errorJSON(w, errors.New("error calling log service"))
+		return
+	}
+
+	response.Body = http.MaxBytesReader(w, response.Body, int64(1024))
+
+	decoder := json.NewDecoder(response.Body)
+
+	var logResp jsonResponse
+	err = decoder.Decode(&logResp)
+
+	if err != nil || logResp.Error {
+		app.errorJSON(w, errors.New("error getting response from log service"))
+		return
+	}
+
+	app.writeJson(w, http.StatusAccepted, jsonResponse{
+		Message: "Success",
+		Error:   false,
+		Data:    logResp.Data,
+	})
+
+}
 func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
 	jsonData, _ := json.MarshalIndent(a, "", "\t")
 

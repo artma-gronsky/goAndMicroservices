@@ -14,7 +14,7 @@ import (
 const (
 	webPort  = 80
 	rpcPort  = 5001
-	mongoUrl = "mongodb://localhost:27017"
+	mongoUrl = "mongodb://mongo:27017"
 	gRpcPort = 50001
 )
 
@@ -32,11 +32,10 @@ func main() {
 		log.Panic(err)
 		return
 	}
-
 	client = mongoClient
+	log.Println("Service successfully connected to mongo-db: ", mongoUrl)
 
 	//create context
-
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 
 	defer cancel()
@@ -53,6 +52,7 @@ func main() {
 
 	// start web server
 	//go app.server()
+	log.Println("Server will be launched now on port:", webPort)
 	app.server()
 }
 
