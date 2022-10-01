@@ -28,7 +28,7 @@ services:
       DSN:  "host=postgres port=5432 user=postgres password=postgres dbname=users sslmode=disable timezone=UTC connect_timeout=5"
 
   mail-service:
-    depends_on: [ mailhod ]
+    depends_on: [ mailhog ]
     build:
       context: ./../mail-service
       dockerfile: ./../mail-service/mail-service.dockerfile
@@ -38,6 +38,15 @@ services:
     deploy:
       mode: replicated
       replicas: 1
+    environment:
+      MAIL_DOMAIN: localhost
+      MAIL_HOST: "mailhog"
+      MAIL_PORT: 1025
+      MAIL_ENCRYPT: none
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+      MAIL_FROM_NAME: "Alexander Gronsky"
+      MAIL_FROM_MAIL: "alex.artmadar@gmail.com"
 
   postgres:
     image: 'postgres:14.0-alpine'
@@ -81,7 +90,7 @@ services:
       mode: replicated
       replicas: 1
 
-  mailhod:
+  mailhog:
     image: 'mailhog/mailhog:latest'
     ports:
       - "1025:1025"

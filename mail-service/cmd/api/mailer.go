@@ -93,7 +93,7 @@ func (m *Mail) SendSMTPMessage(msg Message) error {
 }
 
 func (m *Mail) buildPlainMessage(msg Message) (string, error) {
-	templateToRender := "./templates/mail.plain.gohtml"
+	templateToRender := "./templates/mail.plain.html.gohtml"
 
 	t, err := template.New("email-plain").ParseFiles(templateToRender)
 

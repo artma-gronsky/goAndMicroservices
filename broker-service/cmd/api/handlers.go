@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/go-http-utils/headers"
+	"log"
 	"net/http"
 )
 
@@ -12,6 +14,7 @@ type RequestPayload struct {
 	Action string      `json:"action"`
 	Auth   AuthPayload `json:"auth,omitempty"`
 	Log    LogPayload  `json:"log,omitempty"`
+	Mail   MailPayload `json:"mail,omitempty"`
 }
 
 type AuthPayload struct {
@@ -22,6 +25,13 @@ type AuthPayload struct {
 type LogPayload struct {
 	Name string `json:"name"`
 	Data string `json:"data"`
+}
+
+type MailPayload struct {
+	From    string `json:"from"`
+	To      string `json:"to"`
+	Subject string `json:"subject"`
+	Message string `json:"message"`
 }
 
 func (app *Config) Broker(w http.ResponseWriter, r *http.Request) {
@@ -52,6 +62,10 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 	case "log":
 		{
 			app.log(w, requestPayload.Log)
+		}
+	case "mail":
+		{
+			app.sendMail(w, requestPayload.Mail)
 		}
 	default:
 		{
@@ -168,4 +182,42 @@ func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
 	payload.Data = jsonFromService.Data
 
 	app.writeJson(w, http.StatusAccepted, payload)
+}
+func (app *Config) sendMail(w http.ResponseWriter, a MailPayload) {
+	jsonData, _ := json.MarshalIndent(a, "", "\t")
+
+	url := "http://mail-service/send"
+
+	log.Println(bytes.NewBuffer(jsonData))
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	request.Header.Set(headers.ContentType, "application/json")
+	defer request.Body.Close()
+
+	if err != nil {
+		app.errorJSON(w, err)
+	}
+
+	client := &http.Client{}
+
+	response, err := client.Do(request)
+
+	if err != nil {
+		app.errorJSON(w, err)
+	}
+
+	if response.StatusCode != http.StatusAccepted {
+		app.errorJSON(w, errors.New(fmt.Sprintf("mail-service unswred with the status = %d", response.StatusCode)))
+	}
+
+	dec := json.NewDecoder(response.Body)
+
+	var decoded jsonResponse
+
+	err = dec.Decode(&decoded)
+
+	if err != nil {
+		app.errorJSON(w, err)
+	}
+
+	app.writeJson(w, http.StatusAccepted, decoded)
 }

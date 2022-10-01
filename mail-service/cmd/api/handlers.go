@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 )
 
@@ -19,6 +22,7 @@ func (app *Config) SendMail(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		app.errorJSON(w, err, http.StatusBadRequest)
+		log.Println(err)
 		return
 	}
 
@@ -32,7 +36,10 @@ func (app *Config) SendMail(w http.ResponseWriter, r *http.Request) {
 	err = app.Mailer.SendSMTPMessage(msg)
 
 	if err != nil {
-		app.errorJSON(w, errors.New("Problem with mail sendind"), http.StatusBadRequest)
+		js, _ := json.MarshalIndent(msg, "", "\t")
+		log.Println(bytes.NewBuffer(js))
+		log.Println(err)
+		app.errorJSON(w, errors.New("Problem with sending mail"), http.StatusBadRequest)
 		return
 	}
 
