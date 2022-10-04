@@ -125,7 +125,6 @@ func (app *Config) log(w http.ResponseWriter, a LogPayload) {
 		Error:   false,
 		Data:    logResp.Data,
 	})
-
 }
 func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
 	jsonData, _ := json.MarshalIndent(a, "", "\t")
