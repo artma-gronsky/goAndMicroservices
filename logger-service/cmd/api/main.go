@@ -58,6 +58,8 @@ func main() {
 	rpc.Register(new(RPCServer))
 	go app.rpcListen()
 
+	go app.gRPCListen()
+
 	// start web server
 	go app.server()
 	log.Println("Server will be launched now on port:", webPort)

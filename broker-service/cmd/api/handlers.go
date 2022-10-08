@@ -3,12 +3,18 @@ package main
 import (
 	"broker/event"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/go-http-utils/headers"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"log"
+	"logger-service/logs"
 	"net/http"
+	"net/rpc"
+	"time"
 )
 
 type RequestPayload struct {
@@ -63,7 +69,8 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 	case "log":
 		{
 			//app.log(w, requestPayload.Log)
-			app.logViaRabbitMQ(w, requestPayload.Log)
+			//app.logViaRabbitMQ(w, requestPayload.Log)
+			app.logViaRPC(w, requestPayload.Log)
 		}
 	case "mail":
 		{
@@ -150,6 +157,81 @@ func (app *Config) logViaRabbitMQ(w http.ResponseWriter, a LogPayload) {
 		Error:   false,
 		Data:    "Will be logged via rabbitMQ",
 	})
+}
+
+type RPCPayload struct {
+	Name string
+	Data string
+}
+
+func (app *Config) logViaRPC(w http.ResponseWriter, a LogPayload) {
+	client, err := rpc.Dial("tcp", "logger-service:5001")
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	rpcPayload := RPCPayload{
+		Name: a.Name,
+		Data: a.Data,
+	}
+
+	var result string
+
+	err = client.Call("RPCServer.LogInfo", rpcPayload, &result)
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	payload := jsonResponse{
+		Error:   false,
+		Message: "The log message was logged by remote procedure call",
+	}
+
+	app.writeJson(w, http.StatusAccepted, payload)
+}
+func (app *Config) logViaGRPC(w http.ResponseWriter, r *http.Request) {
+	var requestPayload RequestPayload
+
+	err := app.readJSON(w, r, &requestPayload)
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	conn, err := grpc.Dial("logger-service:50001", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer conn.Close()
+
+	c := logs.NewLogServiceClient(conn)
+	ctx, canel := context.WithTimeout(context.Background(), time.Second)
+	defer canel()
+
+	_, err = c.WriteLog(ctx, &logs.LogRequest{
+		LogEntry: &logs.Log{
+			Name: requestPayload.Log.Name,
+			Data: requestPayload.Log.Data,
+		},
+	})
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	var payload jsonResponse
+	payload.Error = false
+	payload.Message = "Logged via gRPC"
+
+	app.writeJson(w, http.StatusAccepted, payload)
 }
 
 func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
