@@ -14,7 +14,7 @@ services:
     deploy:
       mode: replicated
       replicas: 1
-  authentication-service:
+  authenticate-service:
     image: artmadar/authentication-service:1.0.0
     deploy:
       mode: replicated
@@ -49,7 +49,7 @@ services:
       mode: global
 
   mailhog:
-    image: 'mailhog/mailhog:latest'
+    image: mailhog/mailhog
     ports:
       - "8025:8025"
     deploy:
