@@ -1,4 +1,4 @@
-FRONT_END_BINARY=frontApp
+FRONT_END_BINARY=frontEndApp
 BROKER_BINARY=brokerApp
 AUTHENTICATION_BINARY=authenticationApp
 LOGGER_BINARY=loggerApp
@@ -12,7 +12,7 @@ up:
 	@echo "Docker images started!"
 
 ## up_build: stops docker-compose (if running), builds all projects and starts docker compose
-up_build: build_broker build_authentication build_logger build_mail build_listener
+up_build: build_broker build_authentication build_logger build_mail build_listener build_front
 	@echo "Stopping docker images (if running...)"
 	docker-compose down
 	@echo "Building (when required) and starting docker images..."
@@ -52,14 +52,19 @@ build_logger:
 	cd ../logger-service && env GOOS=linux CGO_ENABLED=0 go build -o ${LOGGER_BINARY} ./cmd/api
 	@echo "Done!"
 
-## build_front: builds the frone end binary
+## build_front: builds the front end binary
 build_front:
+	@echo "Building front end binary for linux..."
+	cd ../front-end && env GOOS=linux CGO_ENABLED=0 go build -o ${FRONT_END_BINARY} ./cmd/web
+	@echo "Done!"
+
+build_front-for-start:
 	@echo "Building front end binary..."
 	cd ../front-end && env CGO_ENABLED=0 go build -o ${FRONT_END_BINARY} ./cmd/web
 	@echo "Done!"
 
 ## start: starts the front end
-start: build_front
+start: build_front-for-start 
 	@echo "Starting front end"
 	cd ../front-end && ./${FRONT_END_BINARY} &
 

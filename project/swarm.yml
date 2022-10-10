@@ -1,10 +1,26 @@
 version: '3'
 
 services:
-  broker-service:
-    image: artmadar/broker-service:1.0.0
+  caddy:
+    image: artmadar/micro-caddy:1.0.0
+    deploy:
+      mode: replicated
+      replicas: 1
     ports:
-      - "8080:80"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+  front-end:
+    image: artmadar/front-end:1.0.1
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  broker-service:
+    image: artmadar/broker-service:1.0.1
     deploy:
       mode: replicated
       replicas: 1
@@ -69,7 +85,7 @@ services:
       - ./db-data/mongo/:/data/db
 
   postgres:
-    image: 'postgres:14.0-alpine'
+    image: 'postgres:14.2-alpine'
     ports:
       - "2345:5432"
     restart: always
@@ -82,4 +98,9 @@ services:
       POSTGRES_DB: users
     volumes:
       - ./db-data/postgres/:/var/lib/postgresql/data/
+
+volumes:
+  caddy_data:
+    external: true
+  caddy_config:
 
